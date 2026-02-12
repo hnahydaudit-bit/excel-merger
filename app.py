@@ -18,20 +18,17 @@ if uploaded_files:
         df = None
         file_name = file.name
 
-        # Try different reading methods
         try:
-            # Try as .xlsx
+            # Try .xlsx
             if file_name.endswith(".xlsx"):
                 df = pd.read_excel(file, engine="openpyxl")
 
-            # Try as real .xls
+            # Try real .xls
             elif file_name.endswith(".xls"):
                 try:
                     df = pd.read_excel(file, engine="xlrd")
                 except:
-                    # Reset file pointer before retry
                     file.seek(0)
-                    # Try as HTML-style .xls
                     tables = pd.read_html(file)
                     df = tables[0]
 
@@ -43,17 +40,18 @@ if uploaded_files:
             st.warning(f"No usable data in file: {file_name}")
             continue
 
-        # Remove last row if mostly empty (merged/summary row)
+        # Remove last row ONLY if it is mostly empty
         last_row = df.tail(1)
         if last_row.isnull().sum(axis=1).values[0] > (len(df.columns) // 2):
             df = df.iloc[:-1]
+
+        st.write(f"Rows read from {file_name}: {len(df)}")
 
         all_data.append(df)
 
     if not all_data:
         st.error("No valid Excel files could be read.")
     else:
-        # Combine files
         final_df = pd.concat(all_data, ignore_index=True)
 
         # Convert Column C to Month
@@ -67,7 +65,7 @@ if uploaded_files:
 
         final_df["Month"] = final_df[date_col].apply(convert_month)
 
-        st.success("Files merged successfully!")
+        st.success(f"Total rows after merge: {len(final_df)}")
         st.dataframe(final_df)
 
         # Download button
