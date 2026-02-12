@@ -40,7 +40,7 @@ if uploaded_files:
             st.warning(f"No usable data in file: {file_name}")
             continue
 
-        # Remove last row ONLY if it is mostly empty
+        # Remove last row only if mostly empty (merged/summary row)
         last_row = df.tail(1)
         if last_row.isnull().sum(axis=1).values[0] > (len(df.columns) // 2):
             df = df.iloc[:-1]
@@ -52,6 +52,7 @@ if uploaded_files:
     if not all_data:
         st.error("No valid Excel files could be read.")
     else:
+        # Combine all files
         final_df = pd.concat(all_data, ignore_index=True)
 
         # Convert Column C to Month
@@ -68,14 +69,18 @@ if uploaded_files:
         st.success(f"Total rows after merge: {len(final_df)}")
         st.dataframe(final_df)
 
-        # Download button
-        output = BytesIO()
-        final_df.to_excel(output, index=False, engine="openpyxl")
-        output.seek(0)
+        # Create Excel file from exact dataframe
+        def create_excel(df):
+            buffer = BytesIO()
+            df.to_excel(buffer, index=False, engine="openpyxl")
+            buffer.seek(0)
+            return buffer
+
+        excel_file = create_excel(final_df)
 
         st.download_button(
             label="Download Consolidated Excel",
-            data=output,
+            data=excel_file,
             file_name="Consolidated Excel.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
