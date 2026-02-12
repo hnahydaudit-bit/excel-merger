@@ -16,17 +16,34 @@ if uploaded_files:
 
     for file in uploaded_files:
         df = None
+        file_name = file.name
 
+        # Try different reading methods
         try:
-            if file.name.endswith(".xls"):
-                df = pd.read_excel(file, engine="xlrd")
-            else:
+            # Try as .xlsx
+            if file_name.endswith(".xlsx"):
                 df = pd.read_excel(file, engine="openpyxl")
-        except Exception as e:
-            st.warning(f"Could not read file: {file.name}")
+
+            # Try as real .xls
+            elif file_name.endswith(".xls"):
+                try:
+                    df = pd.read_excel(file, engine="xlrd")
+                except:
+                    # Reset file pointer before retry
+                    file.seek(0)
+                    # Try as HTML-style .xls
+                    tables = pd.read_html(file)
+                    df = tables[0]
+
+        except Exception:
+            st.warning(f"Could not read file: {file_name}")
             continue
 
-        # Remove last row if mostly empty
+        if df is None or df.empty:
+            st.warning(f"No usable data in file: {file_name}")
+            continue
+
+        # Remove last row if mostly empty (merged/summary row)
         last_row = df.tail(1)
         if last_row.isnull().sum(axis=1).values[0] > (len(df.columns) // 2):
             df = df.iloc[:-1]
