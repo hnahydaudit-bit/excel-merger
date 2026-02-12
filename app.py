@@ -19,11 +19,9 @@ if uploaded_files:
         file_name = file.name
 
         try:
-            # Try .xlsx
             if file_name.endswith(".xlsx"):
                 df = pd.read_excel(file, engine="openpyxl")
 
-            # Try real .xls
             elif file_name.endswith(".xls"):
                 try:
                     df = pd.read_excel(file, engine="xlrd")
@@ -40,7 +38,7 @@ if uploaded_files:
             st.warning(f"No usable data in file: {file_name}")
             continue
 
-        # Remove last row only if mostly empty (merged/summary row)
+        # Remove last row if mostly empty
         last_row = df.tail(1)
         if last_row.isnull().sum(axis=1).values[0] > (len(df.columns) // 2):
             df = df.iloc[:-1]
@@ -54,6 +52,10 @@ if uploaded_files:
     else:
         # Combine all files
         final_df = pd.concat(all_data, ignore_index=True)
+
+        # Reset index and rebuild S No.
+        final_df.reset_index(drop=True, inplace=True)
+        final_df.iloc[:, 0] = range(1, len(final_df) + 1)
 
         # Convert Column C to Month
         date_col = final_df.columns[2]
@@ -69,7 +71,7 @@ if uploaded_files:
         st.success(f"Total rows after merge: {len(final_df)}")
         st.dataframe(final_df)
 
-        # Create Excel file from exact dataframe
+        # Create Excel file
         def create_excel(df):
             buffer = BytesIO()
             df.to_excel(buffer, index=False, engine="openpyxl")
